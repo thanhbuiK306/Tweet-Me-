@@ -1,0 +1,127 @@
+{%extends 'base.html'%}
+{%block head_title%}
+amazing
+{%endblock%}
+{%block content%}
+
+<div class = 'row text-center'>
+    <div class ='col'>
+        <h1>Welcome to Tweet</h1>
+    </div>
+</div>
+<div class = 'row'>
+    <div class ='col-md-4 mx-auto col-10'>
+        <form class ='form' id ='tweet-create-form' method = 'POST' action='create-tweet/'>
+            {% csrf_token %}
+            <div class = 'd-none alert alert-danger' id = 'tweet-create-form-error'></div>
+            <input type='hidden' value='/api/' name='next'>
+            <textarea class = 'form-control' name='content' placeholder ='Tweet content...'></textarea>
+            <button type='submit' class ='btn btn-primary'> Save</button>
+        </form>
+
+    </div>
+</div>
+<div class= 'row' id ='tweets'>
+    Replace me
+</div >
+
+<script>
+    
+    const tweetsElement = document.getElementById("tweets")
+    const tweetCreateFormEl = document.getElementById('tweet-create-form')
+
+    function handleTweetCreateFormDidSubmit(event){
+        event.preventDefault()
+        const myForm = event.target //html of form
+        const myFormData = new FormData(myForm)
+        const url = myForm.getAttribute('action')
+        const method = myForm.getAttribute('method')
+        const typeResponse = 'json'
+        const xhr = new XMLHttpRequest()
+        xhr.typeReponse = typeResponse
+        xhr.open(method, url)
+        xhr.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest")
+        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest")
+        xhr.onload = function(){
+            if (xhr.status == 201){
+                const newTweet = JSON.parse(xhr.response)
+                const newTweetElement = formatTweetElement(newTweet)
+                const ogHtml= tweetsElement.innerHTML
+                tweetsElement.innerHTML = newTweetElement + ogHtml
+                myForm.reset()
+                // const tweetsEl = document.getElementById("tweets")
+                // loadTweets(tweetsEl)
+            }
+            else if(xhr.status === 400){
+
+                const errorJson = JSON.parse(xhr.response)
+                const contentError= errorJson.content
+                if(contentError){
+                    contentErrorMsg = contentError[0]
+                    handleTweetFormCreateError(contentErrorMsg, true)
+                }
+                else{
+                    alert("another error")
+                }
+            }
+            else if(xhr.status === 500){
+                console.log("Internal server error")
+            }
+        }
+        xhr.onerror = function(){
+            alert("An error occur, Please Try again later")
+        }
+        xhr.send(myFormData)
+    }
+    tweetCreateFormEl.addEventListener("submit", handleTweetCreateFormDidSubmit)
+    function handleOnClick(tweet){
+        tweet.likes++
+    }
+    function likeBtn(tweet){
+        return "<div class = 'btn btn-primary btn-sm' onclick = "+handleOnClick(tweet)+">"+tweet.likes+" Likes</div>"
+    }
+    function formatTweetElement(tweet){
+        var formattedText = "<div class = 'col-12 col-md-10 mx-auto border round mb-4 tweet' id ='tweet-"+ tweet.id +"'>" 
+            +"<p>" + tweet.content + "</p>"
+            +"<div class = 'btn-group mb-1'>"+ likeBtn(tweet) + "</div>"+
+            "</div>"
+        return formattedText
+    }
+    function handleTweetFormCreateError(msg, display){
+        var myErrorDiv = document.getElementById("tweet-create-form-error")
+        if(display === true){
+            myErrorDiv.setAttribute("class", "d-block alert alert-danger")
+            myErrorDiv.innerText = msg
+        }
+        else{
+            myErrorDiv.setAttribute("class", "d-none alert alert-danger")
+        }
+    }
+    function loadTweets(tweetsElement){
+        const xhr = new XMLHttpRequest()
+        const typeResponse = 'json'
+        const url = 'tweets/'
+        const method = "GET"
+        xhr.typeReponse = typeResponse
+        xhr.open(method, url)
+        xhr.onload = async function(){
+            const serverResponse = xhr.response
+            try{
+                var listTweets =  JSON.parse(serverResponse).response
+                var finalTweetStr =""
+                var i;
+                for (i=0;i<listTweets.length;i++){
+                    tweetObj = listTweets[i]
+                    finalTweetStr += formatTweetElement(tweetObj)
+                    console.log(tweetObj)
+                }
+                tweetsElement.innerHTML = finalTweetStr
+            }
+            catch(error){
+                console.log(error)}
+        }
+        xhr.send()
+    }
+    loadTweets(tweetsElement)
+</script>
+{%endblock%}
